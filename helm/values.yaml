@@ -53,9 +53,9 @@ deployment:
 
         # MinIO
         - name: MINIO_URL
-          value: "svc-minio-api.minio.svc.cluster.local"
+          value: "192.168.15.150"
         - name: MINIO_PORT
-          value: "9000"
+          value: "30002"
         - name: MINIO_BUCKET
           value: "syrin"
         - name: MINIO_BASE_PATH
