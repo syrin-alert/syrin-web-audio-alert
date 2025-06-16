@@ -56,7 +56,7 @@ deployment:
           value: "svc-minio-api.minio.svc.cluster.local"
         - name: MINIO_PORT
           value: "9000"
-        - name: MINIO_BUCKET_WORK
+        - name: MINIO_BUCKET
           value: "syrin"
         - name: MINIO_BASE_PATH
           value: "queue-play"
