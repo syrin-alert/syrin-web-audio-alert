@@ -84,3 +84,14 @@ services:
         port: 80
         targetPort: 80
         protocol: TCP
+
+  - type: NodePort
+    selector:
+      app: syrin-web-audio-alert
+      component: web
+    ports:
+      - name: syrin-web-audio-alert-tcp
+        nodePort: 30088
+        port: 80
+        targetPort: 80
+        protocol: TCP
