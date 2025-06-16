@@ -1,0 +1,86 @@
+##############################
+# App Definition
+app: syrin-web-audio-alert
+component: web
+core: syrin
+version: 1.0.0
+
+##############################
+# Definition of the Deployment
+deployment:
+  replicas: 1
+  revisionHistoryLimit: 3
+  sendlogs: "true"
+  stack: syrin
+  lbtype: internal
+  affinity:
+    - apps: services
+  containers:
+    - name: syrin-web-audio-alert
+      image: ghcr.io/syrin-alert/
+      resources:
+        requests:
+          memory: "128Mi"
+          cpu: "50m"
+        limits:
+          memory: "512Mi"
+          cpu: "1"
+      env:
+        - name: TZ
+          value: "America/Sao_Paulo"
+        - name: PORT
+          value: "80"
+
+        # RabbitMQ
+        - name: RABBITMQ_HOST
+          value: "svc-rabbitmq.rabbitmq.svc.cluster.local"
+        - name: RABBITMQ_PORT
+          value: "5672"
+        - name: RABBITMQ_VHOST
+          value: "syrin"
+        - name: RABBITMQ_USER
+          valueFrom:
+            secretKeyRef:
+              name: s-rabbitmq
+              key: RABBITMQ_DEFAULT_USER
+        - name: RABBITMQ_PASS
+          valueFrom:
+            secretKeyRef:
+              name: s-rabbitmq
+              key: RABBITMQ_DEFAULT_PASS
+        - name: QUEUE_NAME
+          value: "04_syrin_notification_audio_process_play"
+
+        # MinIO
+        - name: MINIO_URL
+          value: "svc-minio-api.minio.svc.cluster.local"
+        - name: MINIO_PORT
+          value: "9000"
+        - name: MINIO_BUCKET_WORK
+          value: "syrin"
+        - name: MINIO_BASE_PATH
+          value: "queue-play"
+        - name: MINIO_ROOT_USER
+          valueFrom:
+            secretKeyRef:
+              name: s-minio
+              key: MINIO_ROOT_USER #MINIO_ACCESS_KEY
+        - name: MINIO_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: s-minio
+              key: MINIO_ROOT_PASSWORD #MINIO_SECRET_KEY
+
+
+###########################
+# Definition of the Service
+services:
+  - type: ClusterIP
+    selector:
+      app: syrin-web-audio-alert
+      component: web
+    ports:
+      - name: syrin-web-audio-alert-tcp
+        port: 80
+        targetPort: 80
+        protocol: TCP

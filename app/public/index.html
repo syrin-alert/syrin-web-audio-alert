@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <title>Syrin - Alerta de Áudio</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h2>🔔 Syrin Alerta recebido:</h2>
+  <div id="alert">Aguardando alerta...</div>
+
+  <button id="enableSound" onclick="enableAudio()">🔊 Ativar som</button>
+  <button id="toggleMute" onclick="toggleMute()" style="display: none;">🔇 Silenciar</button>
+
+  <audio id="player" autoplay muted></audio>
+
+  <h3>📊 Estatísticas</h3>
+  <pre id="stats">Carregando estatísticas...</pre>
+
+  <script>
+    let audioUrl = '';
+    const player = document.getElementById('player');
+    const enableBtn = document.getElementById('enableSound');
+    const toggleBtn = document.getElementById('toggleMute');
+
+    function enableAudio() {
+      player.muted = false;
+      enableBtn.style.display = 'none';
+      toggleBtn.style.display = 'inline-block';
+      console.log("🔊 Som ativado!");
+    }
+
+    function toggleMute() {
+      player.muted = !player.muted;
+      toggleBtn.innerText = player.muted ? '🔊 Ativar som' : '🔇 Silenciar';
+      console.log(player.muted ? "🔕 Som silenciado" : "🔔 Som ativado");
+    }
+
+    function atualizarEstatisticas() {
+      fetch('/api/stats')
+        .then(res => res.json())
+        .then(stats => {
+          const statsDiv = document.getElementById('stats');
+          const texto = [
+            `Total de alertas: ${stats.total}`,
+            '',
+            'Por Nível:',
+            ...Object.entries(stats.porNivel).map(([k, v]) => `- ${k}: ${v}`),
+            '',
+            'Por Categoria:',
+            ...Object.entries(stats.porCategoria).map(([k, v]) => `- ${k}: ${v}`)
+          ];
+          statsDiv.innerText = texto.join('\n');
+        })
+        .catch(err => {
+          console.warn("Erro ao buscar estatísticas:", err);
+          document.getElementById('stats').innerText = "⚠️ Erro ao carregar estatísticas.";
+        });
+    }
+
+    const socket = new WebSocket(`ws://${location.host}`);
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      document.getElementById('alert').innerText =
+        `${data.text}\n(${data.datetime})`;
+
+      audioUrl = data.audioUrl;
+      player.src = audioUrl;
+      player.load();
+
+      player.oncanplay = () => {
+        player.play().catch(err => {
+          console.warn("⚠️ Reprodução bloqueada até clique inicial", err);
+        });
+      };
+
+      player.onended = () => {
+        if (!audioUrl) return;
+
+        const url = new URL(audioUrl);
+        const pathParts = url.pathname.split('/');
+        const fileName = decodeURIComponent(
+          pathParts[pathParts.length - 2] + '/' + pathParts[pathParts.length - 1]
+        );
+
+        fetch(`/delete?file=${encodeURIComponent(fileName)}`)
+          .then(() => console.log("🗑️ Áudio deletado"))
+          .catch(err => console.warn("❌ Falha ao deletar:", err));
+      };
+
+      atualizarEstatisticas();
+    };
+
+    // Inicializa o dashboard ao carregar
+    atualizarEstatisticas();
+  </script>
+</body>
+</html>
